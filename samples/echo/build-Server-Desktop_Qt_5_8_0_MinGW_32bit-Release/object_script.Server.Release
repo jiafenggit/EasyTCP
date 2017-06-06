@@ -1,0 +1,13 @@
+INPUT(
+./release\main.o
+./release\widget.o
+./release\EasyTcpAcceptor.o
+./release\EasyTcpAutoBuffer.o
+./release\EasyTcpClient.o
+./release\EasyTcpConnection.o
+./release\EasyTcpContext.o
+./release\EasyTcpServer.o
+./release\EasyTcpWorker.o
+./release\EasyTcpWorkers.o
+./release\moc_widget.o
+);
