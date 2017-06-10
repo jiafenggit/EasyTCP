@@ -50,6 +50,7 @@ void Widget::whenConnected(EasyTcp::Connection *con)
     con->enableKeepalive();
     con->setSendBufferSize(128 * 1024);
     con->setReceiveBufferSize(128 * 1024);
+    con->setLinger(1, 0);
 
     EasyTcp::AutoBuffer buf;
     buf.reset(TEST_DEFAULT_DATA_SIZ);
@@ -118,7 +119,6 @@ void Widget::whenBufferReceived(EasyTcp::Connection *con, EasyTcp::AutoBuffer da
         }
     }
 
-    str.append("");
     emit textNeedPrint(ui->txtedtMsg, str);
 }
 

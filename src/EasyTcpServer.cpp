@@ -56,17 +56,21 @@ bool Server::open(unsigned short port, unsigned int nWorkerNum, unsigned int bac
     return true;
 }
 
-void Server::close(long nTimeout)
+void Server::close(long timeout)
 {
     clock_t t0 = clock();
 
     m_acceptor.reset();
-    for (auto &v : m_connections)
+
     {
-        v.second->disconnect();
+        std::lock_guard<std::mutex> lockGuard(m_lockConnections);
+        for (auto &v : m_connections)
+        {
+            v.second->disconnect();
+        }
     }
 
-    while (nTimeout == INFINITE || clock() - t0 < nTimeout)
+    while (timeout == INFINITE || clock() - t0 < timeout)
     {
         if (m_connections.empty())
         {

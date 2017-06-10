@@ -107,7 +107,6 @@ void Widget::whenBufferReceived(EasyTcp::Connection *, EasyTcp::AutoBuffer data)
                 m_client->disconnect();
             }
         }
-
     }
 
     emit textNeedPrint(ui->txtedtMsg, str);
