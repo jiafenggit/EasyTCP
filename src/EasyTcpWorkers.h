@@ -20,7 +20,6 @@ namespace EasyTcp
         std::vector<std::shared_ptr<Worker>> m_workers;
         bool m_isRunning;
         unsigned int m_indexNext;
-        std::set<SOCKET> m_attached;
     };
 }
 
