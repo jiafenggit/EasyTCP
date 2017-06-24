@@ -4,7 +4,7 @@
 #include "EasyTcpConnection.h"
 #include "EasyTcpAcceptor.h"
 #include "EasyTcpEventPolls.h"
-#include <map>
+#include <unordered_map>
 #include <mutex>
 
 namespace EasyTcp
@@ -38,7 +38,7 @@ namespace EasyTcp
     private:
         std::shared_ptr<Acceptor> m_acceptor;
         std::shared_ptr<EventPolls> m_eventPolls;
-        std::map<Connection*, std::shared_ptr<Connection>> m_connections;
+        std::unordered_map<Connection*, std::shared_ptr<Connection>> m_connections;
         bool m_opened;
 
         std::recursive_mutex m_lockConnections;
