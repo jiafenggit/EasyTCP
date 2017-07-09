@@ -62,6 +62,8 @@ bool Client::connect(const std::string& host, unsigned short port)
     if (bind(m_handle, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR
         || !m_worker->attach(this))
     {
+        closesocket(m_handle);
+        m_handle = INVALID_SOCKET;
         m_isDoingConnect = 0;
         return false;
     }
@@ -74,6 +76,8 @@ bool Client::connect(const std::string& host, unsigned short port)
     int err;
     if (!m_sptrConnectAction->invoke(err))
     {
+        closesocket(m_handle);
+        m_handle = INVALID_SOCKET;
         m_isDoingConnect = 0;
         return false;
     }
@@ -97,6 +101,8 @@ void Client::whenDoConnectSucceed(Context::IAction* pAction)
 
 void Client::whenDoConnectFailed(Context::IAction* pAction, int err)
 {
+    closesocket(m_handle);
+    m_handle = INVALID_SOCKET;
     m_isDoingConnect = 0;
 
     if (onConnectFailed)

@@ -51,6 +51,8 @@ bool Client::connect(const std::string& host, unsigned short port)
 
     if(::connect(m_handle, (sockaddr*)&addr, sizeof(addr)))
     {
+        close(m_handle);
+        m_handle = -1;
         goto CONNECT_FAILED;
     }
 
