@@ -63,5 +63,7 @@ void Acceptor::execute()
     {
         if (onAccepted)
             onAccepted(sock);
+        else
+            closesocket(sock);
     }
 }
