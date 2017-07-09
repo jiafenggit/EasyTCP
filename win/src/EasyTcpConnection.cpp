@@ -245,8 +245,6 @@ void Connection::whenSendOrReceiveFailed(Context::IAction* pAction, int err)
         onDisconnected(this);
 }
 
-static int dbgCount = 0;
-
 bool Connection::recordToPosts(Context::SPTRIAction sptrAction)
 {
     if (m_didDisconnect)
