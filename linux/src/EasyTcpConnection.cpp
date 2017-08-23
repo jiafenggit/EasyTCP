@@ -206,7 +206,7 @@ void Connection::handleEvents(uint32_t events)
     if (!m_connected)
         return;
 
-    for(;;)
+    do
     {
         std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
         if (!m_connected)
@@ -277,8 +277,7 @@ void Connection::handleEvents(uint32_t events)
             }
         }
 
-        break;
-    }
+    } while(false);
 
     if (needCallbackBufferSent && onBufferSent)
         onBufferSent(this, taskSend->data());
