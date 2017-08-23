@@ -60,9 +60,15 @@ void Server::close(long timeout)
 
     {
         std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
-        for (auto &v : m_connections)
+        std::vector<Connection*> tmpConnections;
+        for (auto it : m_connections)
         {
-            v.second->disconnect();
+            tmpConnections.push_back(it.first);
+        }
+
+        for (auto it : tmpConnections)
+        {
+            it->disconnect();
         }
     }
 
