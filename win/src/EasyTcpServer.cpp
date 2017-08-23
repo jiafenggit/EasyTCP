@@ -63,14 +63,20 @@ void Server::close(long timeout)
     m_acceptor.reset();
 
     {
-        std::lock_guard<std::mutex> lockGuard(m_lockConnections);
-        for (auto &v : m_connections)
+        std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
+        std::vector<Connection*> tmpConnections;
+        for (auto it : m_connections)
         {
-            v.second->disconnect();
+            tmpConnections.push_back(it.first);
+        }
+
+        for (auto it : tmpConnections)
+        {
+            it->disconnect();
         }
     }
 
-    while (timeout == INFINITE || clock() - t0 < timeout)
+    while ((unsigned long)timeout == INFINITE || clock() - t0 < timeout)
     {
         if (m_connections.empty())
         {
@@ -83,7 +89,7 @@ void Server::close(long timeout)
 
     if (!m_connections.empty())
     {
-        std::lock_guard<std::mutex> lockGuard(m_lockConnections);
+        std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
         m_connections.clear();
     }
 
@@ -101,7 +107,7 @@ void Server::addConnection(SOCKET sock)
     if(m_workers->getNextWorker()->attach(sptrConnection.get()))
     {
         {
-            std::lock_guard<std::mutex> lockGuard(m_lockConnections);
+            std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
             m_connections.insert(std::make_pair(sptrConnection.get(), sptrConnection));
         }
 
@@ -116,7 +122,7 @@ void Server::removeConnection(Connection *con)
         onDisconnected(con);
 
     {
-        std::lock_guard<std::mutex> lockGuard(m_lockConnections);
+        std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
         m_connections.erase(con);
     }
 }
