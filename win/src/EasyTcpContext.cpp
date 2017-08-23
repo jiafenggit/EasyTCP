@@ -27,7 +27,7 @@ IAction* Context::action()
 
 static long sId = 0;
 
-IAction::IAction(const SOCKET sock)
+IAction::IAction(SOCKET sock)
     : m_context(new Context(this)), m_socket(sock)
 {
 
@@ -38,7 +38,7 @@ IAction::~IAction()
 
 }
 
-ConnectAction::ConnectAction(const SOCKET sock, const std::string &host,
+ConnectAction::ConnectAction(SOCKET sock, const std::string &host,
     unsigned short port, CALLBACK1 connectedCallback,
      CALLBACK2 connectFailedCallback)
     : IAction(sock), m_host(host), m_port(port),
@@ -92,7 +92,7 @@ void ConnectAction::error(int err)
         this->m_connectFailedCallback(this, err);
 }
 
-DisconnectAction::DisconnectAction(const SOCKET sock,
+DisconnectAction::DisconnectAction(SOCKET sock,
     CALLBACK1 disconnectedCallback)
     : IAction(sock), m_disconnectedCallback(disconnectedCallback)
 {
@@ -138,7 +138,7 @@ void DisconnectAction::error(int err)
 
 }
 
-TransmitAction::TransmitAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+TransmitAction::TransmitAction(SOCKET sock, EasyTcp::AutoBuffer data,
         CALLBACK1 finishedCallback, CALLBACK2 badCallback)
     : IAction(sock), m_data(data), m_finishedCallback(finishedCallback),
     m_badCallback(badCallback), m_progress(0)
@@ -201,7 +201,7 @@ EasyTcp::AutoBuffer TransmitAction::data()
     return m_data;
 }
 
-SendAction::SendAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+SendAction::SendAction(SOCKET sock, EasyTcp::AutoBuffer data,
     CALLBACK1 finishedCallback, CALLBACK2 badCallback)
     : TransmitAction(sock, data, finishedCallback, badCallback)
 {
@@ -224,7 +224,7 @@ bool SendAction::transmit(int& err)
     return true;
 }
 
-ReceiveAction::ReceiveAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+ReceiveAction::ReceiveAction(SOCKET sock, EasyTcp::AutoBuffer data,
     CALLBACK1 finishedCallback, CALLBACK2 badCallback)
     : TransmitAction(sock, data, finishedCallback, badCallback), m_flags(0)
 {

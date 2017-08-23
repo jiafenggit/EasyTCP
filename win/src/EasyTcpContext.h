@@ -32,7 +32,7 @@ namespace EasyTcp
         class IAction : public std::enable_shared_from_this<IAction>
         {
         public:
-            IAction(const SOCKET sock);
+            IAction(SOCKET sock);
             virtual ~IAction();
             Context* context();
 
@@ -42,7 +42,7 @@ namespace EasyTcp
 
         protected:
             SPTRContext m_context;
-            const SOCKET m_socket;
+            SOCKET m_socket;
         };
         typedef std::shared_ptr<IAction> SPTRIAction;
 
@@ -50,7 +50,7 @@ namespace EasyTcp
         class ConnectAction : public IAction
         {
         public:
-            ConnectAction(const SOCKET sock,
+            ConnectAction(SOCKET sock,
                 const std::string &host, unsigned short port,
                 CALLBACK1 connectedCallback = nullptr,
                 CALLBACK2 connectFailedCallback = nullptr);
@@ -70,7 +70,7 @@ namespace EasyTcp
         class DisconnectAction : public IAction
         {
         public:
-            DisconnectAction(const SOCKET sock,
+            DisconnectAction(SOCKET sock,
                 CALLBACK1 disconnectedCallback = NULL);
 
             bool invoke(int& err);
@@ -86,7 +86,7 @@ namespace EasyTcp
         class TransmitAction : public IAction
         {
         public:
-            TransmitAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+            TransmitAction(SOCKET sock, EasyTcp::AutoBuffer data,
                 CALLBACK1 finishedCallback = nullptr,
                 CALLBACK2 badCallback = nullptr);
 
@@ -111,7 +111,7 @@ namespace EasyTcp
         class SendAction : public TransmitAction
         {
         public:
-            SendAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+            SendAction(SOCKET sock, EasyTcp::AutoBuffer data,
                        CALLBACK1 finishedCallback = nullptr,
                        CALLBACK2 badCallback = nullptr);
 
@@ -123,7 +123,7 @@ namespace EasyTcp
         class ReceiveAction : public TransmitAction
         {
         public:
-            ReceiveAction(const SOCKET sock, EasyTcp::AutoBuffer data,
+            ReceiveAction(SOCKET sock, EasyTcp::AutoBuffer data,
                           CALLBACK1 finishedCallback = nullptr,
                           CALLBACK2 badCallback = nullptr);
 
