@@ -8,9 +8,10 @@ using namespace EasyTcp;
 using namespace std::placeholders;
 
 Client::Client()
-    : m_worker(new Worker()),
-      onConnected(nullptr),
-      onConnectFailed(nullptr)
+    :   m_worker(new Worker()),
+        onConnected(nullptr),
+        onConnectFailed(nullptr),
+        m_isDoingConnect(0)
 {
 
 }
