@@ -20,7 +20,7 @@ namespace EasyTcp
 
         bool open(unsigned short port, unsigned int numWorker = 2,
             unsigned int backlog = 15);
-        void close(long timeout = INFINITE);
+        void close();
 
     private:
         Server();
@@ -40,7 +40,7 @@ namespace EasyTcp
         std::unordered_map<Connection*, std::shared_ptr<Connection>> m_connections;
         bool m_opened;
 
-        std::mutex m_lockConnections;
+        std::recursive_mutex m_lockConnections;
     };
 }
 

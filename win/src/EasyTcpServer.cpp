@@ -1,15 +1,12 @@
 #include "EasyTcpServer.h"
 #include <time.h>
+#include <unistd.h>
 
 using namespace EasyTcp;
 using namespace std::placeholders;
 
 Server::Server()
-    : m_opened(false),
-      onConnected(nullptr),
-      onDisconnected(nullptr),
-      onBufferSent(nullptr),
-      onBufferReceived(nullptr)
+    : m_opened(false)
 {
 
 }
@@ -27,7 +24,7 @@ SPTRServer Server::create()
 
 Server::~Server()
 {
-    close(INFINITE);
+    close();
     WSACleanup();
 }
 
@@ -56,42 +53,22 @@ bool Server::open(unsigned short port, unsigned int nWorkerNum, unsigned int bac
     return true;
 }
 
-void Server::close(long timeout)
+void Server::close()
 {
-    clock_t t0 = clock();
-
     m_acceptor.reset();
 
     {
         std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
-        std::vector<Connection*> tmpConnections;
-        for (auto it : m_connections)
-        {
-            tmpConnections.push_back(it.first);
-        }
-
-        for (auto it : tmpConnections)
-        {
-            it->disconnect();
-        }
+        auto connections = m_connections;
+        for (auto it : connections)
+            it.second->disconnect();
     }
 
-    while ((unsigned long)timeout == INFINITE || clock() - t0 < timeout)
-    {
-        if (m_connections.empty())
-        {
-            break;
-        }
-        _sleep(1);
-    }
+    while (!m_connections.empty())
+        usleep(1);
 
     m_workers.reset();
 
-    if (!m_connections.empty())
-    {
-        std::lock_guard<std::recursive_mutex> lockGuard(m_lockConnections);
-        m_connections.clear();
-    }
 
     m_opened = false;
 }

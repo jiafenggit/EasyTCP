@@ -9,7 +9,7 @@ namespace EasyTcp
     class AutoBuffer
     {
     public:
-        AutoBuffer();
+        AutoBuffer(size_t size = 0);
 
         void reset();
         bool reset(size_t size);

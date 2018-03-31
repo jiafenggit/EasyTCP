@@ -1,139 +1,44 @@
 #ifndef EASYTCPCONTEXT_H
 #define EASYTCPCONTEXT_H
 
-#include <WinSock2.h>
+#include <Winsock2.h>
 #include <memory>
 #include <functional>
 #include "EasyTcpAutoBuffer.h"
+#include <atomic>
 
 namespace EasyTcp
 {
-    namespace Context
+    class Context : public OVERLAPPED
     {
-        class IAction;
+    public:
+        Context();
+        Context(AutoBuffer buffer);
 
-        typedef std::function<void(IAction*)> CALLBACK1;
-        typedef std::function<void(IAction*, int)> CALLBACK2;
+        void increase();
+        void decrease();
 
-        class Context : public OVERLAPPED
-        {
-        public:
-            Context(IAction* action);
-            ~Context();
+        void increaseProgress(size_t increase);
+        void error(int err);
+        size_t progress();
 
-            IAction* action();
+        AutoBuffer buffer();
+        WSABUF* WSABuf();
+        bool finished();
 
-        private:
-            IAction* m_action;
-        };
-        typedef std::shared_ptr<Context> SPTRContext;
+    public:
+        std::function<void(Context*, size_t increase)> onDone;
+        std::function<void(Context*, int err)> onError;
 
-        //action
-        class IAction : public std::enable_shared_from_this<IAction>
-        {
-        public:
-            IAction(SOCKET sock);
-            virtual ~IAction();
-            Context* context();
+    private:
+        ~Context();
 
-            virtual bool invoke(int& err) = 0;
-            virtual void update(unsigned int increase) = 0;
-            virtual void error(int err) = 0;
-
-        protected:
-            SPTRContext m_context;
-            SOCKET m_socket;
-        };
-        typedef std::shared_ptr<IAction> SPTRIAction;
-
-        //connect
-        class ConnectAction : public IAction
-        {
-        public:
-            ConnectAction(SOCKET sock,
-                const std::string &host, unsigned short port,
-                CALLBACK1 connectedCallback = nullptr,
-                CALLBACK2 connectFailedCallback = nullptr);
-
-            bool invoke(int& err);
-            void update(unsigned int increase);
-            void error(int err);
-
-        protected:
-            std::string m_host;
-            unsigned short m_port;
-            CALLBACK1 m_connectedCallback;
-            CALLBACK2 m_connectFailedCallback;
-        };
-
-        //disconnect
-        class DisconnectAction : public IAction
-        {
-        public:
-            DisconnectAction(SOCKET sock,
-                CALLBACK1 disconnectedCallback = NULL);
-
-            bool invoke(int& err);
-            void update(unsigned int increase);
-            void error(int err);
-
-        protected:
-            CALLBACK1 m_disconnectedCallback;
-        };
-
-
-        //transmit
-        class TransmitAction : public IAction
-        {
-        public:
-            TransmitAction(SOCKET sock, EasyTcp::AutoBuffer data,
-                CALLBACK1 finishedCallback = nullptr,
-                CALLBACK2 badCallback = nullptr);
-
-            bool invoke(int& err);
-            void update(unsigned int increase);
-            void error(int err);
-
-            EasyTcp::AutoBuffer data();
-
-        protected:
-            virtual bool transmit(int& err) = 0;
-
-        protected:
-            EasyTcp::AutoBuffer m_data;
-            WSABUF m_wsaBuffer;
-            CALLBACK1 m_finishedCallback;
-            CALLBACK2 m_badCallback;
-            unsigned int m_progress;
-        };
-
-        //send
-        class SendAction : public TransmitAction
-        {
-        public:
-            SendAction(SOCKET sock, EasyTcp::AutoBuffer data,
-                       CALLBACK1 finishedCallback = nullptr,
-                       CALLBACK2 badCallback = nullptr);
-
-        protected:
-            bool transmit(int& err);
-        };
-
-        //receive
-        class ReceiveAction : public TransmitAction
-        {
-        public:
-            ReceiveAction(SOCKET sock, EasyTcp::AutoBuffer data,
-                          CALLBACK1 finishedCallback = nullptr,
-                          CALLBACK2 badCallback = nullptr);
-
-        protected:
-            bool transmit(int& err);
-
-        protected:
-            unsigned long m_flags;
-        };
-    }
+    private:
+        AutoBuffer m_buffer;
+        std::atomic<int> m_ref;
+        size_t m_progress;
+        WSABUF m_wsaBuffer;
+    };
 }
 
 #endif

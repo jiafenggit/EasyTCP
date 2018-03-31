@@ -3,20 +3,27 @@
 #include <mswsock.h>
 #include <WinBase.h>
 #include <functional>
+#include <unistd.h>
 
 using namespace EasyTcp;
 using namespace std::placeholders;
 
 Client::Client()
-    :   m_worker(new Worker()),
-        onConnected(nullptr),
-        onConnectFailed(nullptr),
-        m_isDoingConnect(0)
+    :   m_connecting(false)
 {
 
 }
 
 SPTRClient Client::create()
+{
+    std::shared_ptr<Worker> worker(new Worker());
+    if (!worker->init())
+        return SPTRClient();
+
+    return create(worker);
+}
+
+SPTRClient Client::create(std::shared_ptr<Worker> worker)
 {
     WSADATA wsaData;
 
@@ -26,11 +33,7 @@ SPTRClient Client::create()
     }
 
     SPTRClient ret(new Client());
-    if (!ret->m_worker->init())
-    {
-        ret.reset();
-        return ret;
-    }
+    ret->m_worker = worker;
 
     return ret;
 }
@@ -38,75 +41,100 @@ SPTRClient Client::create()
 Client::~Client()
 {
     disconnect();
+    while(m_connected || m_countPost)
+        usleep(1);
     WSACleanup();
 }
 
 bool Client::connect(const std::string& host, unsigned short port)
 {
+    static LPFN_CONNECTEX ConnectEx = NULL;
+
     if (m_connected)
         return false;
 
-    if (InterlockedCompareExchange(&m_isDoingConnect, 1, 0) == 1)
+    bool e = false;
+    if (!m_connecting.compare_exchange_strong(e, true))
         return false;
 
-    m_handle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (m_handle == INVALID_SOCKET)
+    do
     {
-        m_isDoingConnect = 0;
-        return false;
+        m_handle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (m_handle == INVALID_SOCKET)
+            break;
+
+        sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_addr.S_un.S_addr = INADDR_ANY;
+        addr.sin_port = 0;
+        if (bind(m_handle, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR
+            || !m_worker->attach(this))
+            break;
+
+        if (!ConnectEx)
+        {
+            GUID guid = WSAID_CONNECTEX;
+            DWORD numBytes;
+
+            if(WSAIoctl(m_handle, SIO_GET_EXTENSION_FUNCTION_POINTER,
+                &guid, sizeof(guid), &ConnectEx,
+                sizeof(ConnectEx), &numBytes, NULL, NULL) == SOCKET_ERROR)
+                    break;
+        }
+
+        Context *context = new Context();
+        context->onDone = [this](Context*, size_t)
+        {
+            decreasePostCount();
+            m_connected = true;
+            m_connecting = false;
+
+            setsockopt(m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+            updateEndPoint();
+
+            if (onConnected)
+                this->onConnected(this);
+        };
+
+        context->onError = [this](Context* , int err)
+        {
+            decreasePostCount();
+            closesocket(m_handle);
+            m_handle = INVALID_SOCKET;
+            m_connecting = 0;
+
+            if (onConnectFailed)
+                this->onConnectFailed(this, err);
+        };
+
+        {
+            sockaddr_in addr;
+            addr.sin_family = AF_INET;
+            addr.sin_addr.S_un.S_addr = inet_addr(host.c_str());
+            addr.sin_port = htons(port);
+
+            increasePostCount();
+            if(!ConnectEx(m_handle, (sockaddr*)&addr, sizeof(addr), NULL, 0, NULL, context))
+            {
+                int err = WSAGetLastError();
+                if (err != ERROR_IO_PENDING)
+                {
+                    decreasePostCount();
+                    break;
+                }
+            }
+        }
+
+        return true;
     }
+    while (0);
 
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_addr.S_un.S_addr = INADDR_ANY;
-    addr.sin_port = 0;
-    if (bind(m_handle, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR
-        || !m_worker->attach(this))
-    {
-        closesocket(m_handle);
-        m_handle = INVALID_SOCKET;
-        m_isDoingConnect = 0;
-        return false;
-    }
-
-    m_sptrConnectAction.reset(
-        new Context::ConnectAction(m_handle, host, port,
-            std::bind(&Client::whenDoConnectSucceed, this, _1),
-            std::bind(&Client::whenDoConnectFailed, this, _1, _2)));
-
-    int err;
-    if (!m_sptrConnectAction->invoke(err))
-    {
-        closesocket(m_handle);
-        m_handle = INVALID_SOCKET;
-        m_isDoingConnect = 0;
-        return false;
-    }
-
-    return true;
-}
-
-
-void Client::whenDoConnectSucceed(Context::IAction* pAction)
-{
-    m_connected = true;
-    m_isDoingConnect = 0;
-    m_didDisconnect = false;
-
-    setsockopt(m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
-    updateEndPoint();
-
-    if (onConnected)
-        this->onConnected(this);
-}
-
-void Client::whenDoConnectFailed(Context::IAction* pAction, int err)
-{
     closesocket(m_handle);
     m_handle = INVALID_SOCKET;
-    m_isDoingConnect = 0;
-
-    if (onConnectFailed)
-        this->onConnectFailed(this, err);
+    m_connecting = false;
+    return false;
 }
+
+
+
 

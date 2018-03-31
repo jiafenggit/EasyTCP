@@ -15,13 +15,11 @@ Connection::Connection()
 Connection::Connection(SOCKET sock, bool connected)
     : m_handle(sock),
       m_connected(connected),
-      m_didDisconnect(false),
       m_localPort(0),
       m_peerPort(0),
       m_userdata(NULL),
-      onDisconnected(nullptr),
-      onBufferSent(nullptr),
-      onBufferReceived(nullptr)
+      m_disconnecting(false),
+      m_countPost(0)
 {
 
 }
@@ -38,31 +36,21 @@ bool Connection::connected()
 
 bool Connection::disconnect()
 {
-    bool needCallback = false;
-
-    if (!m_connected || m_didDisconnect)
+    if (!m_connected || m_disconnecting)
         return false;
 
     {
         std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-
-        if (!m_connected || m_didDisconnect)
+        if (!m_connected || m_disconnecting)
             return false;
 
-        shutdown(m_handle, SD_BOTH);
-        m_didDisconnect = true;
-
-        if (m_posts.empty())
-        {
-            closesocket(m_handle);
-            m_connected = false;    
-            needCallback = true;
-        }
+        m_disconnecting = true;
+        closesocket(m_handle);
     }
 
-    if (needCallback && onDisconnected)
+    if (!m_countPost)
     {
-        this->onDisconnected(this);
+        whenDisconnected();
     }
 
     return true;
@@ -70,57 +58,26 @@ bool Connection::disconnect()
 
 bool Connection::send(AutoBuffer buffer)
 {
-    if (!m_connected)
-        return false;
-
-    Context::SPTRIAction sptrAction(new Context::SendAction(m_handle,
-        buffer, std::bind(&whenSent, this, _1),
-        std::bind(&whenSendOrReceiveFailed, this, _1, _2)));
-
-    if(!recordToPosts(sptrAction))
-    {
-        return false;
-    }
-
-    int err;
-    if (!sptrAction->invoke(err))
-    {
-        removeFromPosts(sptrAction.get());
-        return false;
-    }
-
-    return true;
+    return post(buffer, true,
+        std::bind(&Connection::whenSendDone, this, _1, _2),
+        std::bind(&Connection::whenError, this, _1, _2));
 }
 
 bool Connection::recv(AutoBuffer buffer)
 {
-    if (!m_connected)
-        return false;
-
-   Context::SPTRIAction sptrAction(new Context::ReceiveAction(m_handle,
-        buffer, std::bind(&whenReceived, this, _1),
-        std::bind(&whenSendOrReceiveFailed, this, _1, _2)));
-
-   if(!recordToPosts(sptrAction))
-   {
-       return false;
-   }
-
-   int err;
-   if (!sptrAction->invoke(err))
-   {
-       removeFromPosts(sptrAction.get());
-       return false;
-   }
-
-    return true;
+    return post(buffer, false,
+        std::bind(&Connection::whenRecvDone, this, _1, _2),
+        std::bind(&Connection::whenError, this, _1, _2));
 }
 
 bool Connection::enableKeepalive(unsigned long nInterval, unsigned long nTime)
 {
-    tcp_keepalive inKeepAlive = {0};
-    tcp_keepalive outKeepAlive = {0};
+    tcp_keepalive inKeepAlive;
+    tcp_keepalive outKeepAlive;
     unsigned long numBytes = 0;
+
+    memset(&inKeepAlive, 0, sizeof(inKeepAlive));
+    memset(&outKeepAlive, 0, sizeof(outKeepAlive));
 
     inKeepAlive.onoff = 1;
     inKeepAlive.keepaliveinterval = nInterval;
@@ -132,9 +89,12 @@ bool Connection::enableKeepalive(unsigned long nInterval, unsigned long nTime)
 
 bool Connection::disableKeepalive()
 {
-    tcp_keepalive inKeepAlive = {0};
-    tcp_keepalive outKeepAlive = {0};
+    tcp_keepalive inKeepAlive;
+    tcp_keepalive outKeepAlive;
     unsigned long numBytes = 0;
+
+    memset(&inKeepAlive, 0, sizeof(inKeepAlive));
+    memset(&outKeepAlive, 0, sizeof(outKeepAlive));
 
     inKeepAlive.onoff = 0;
 
@@ -208,74 +168,200 @@ void *Connection::userdata()
     return m_userdata;
 }
 
-void Connection::whenSent(Context::IAction* pAction)
+bool Connection::post(Context *context, bool isSend)
 {
-    Context::TransmitAction *pTransmitAction = static_cast<Context::TransmitAction *>(pAction);
-    EasyTcp::AutoBuffer data = pTransmitAction->data();
-
-    bool ret = removeFromPostsAndSafelyRelease(pAction);
-
-    if (onBufferSent)
-        this->onBufferSent(this, data);
-
-    if (ret && onDisconnected)
-        onDisconnected(this);
-
-}
-
-void Connection::whenReceived(Context::IAction* pAction)
-{
-    Context::TransmitAction *pTransmitAction = static_cast<Context::TransmitAction *>(pAction);
-    EasyTcp::AutoBuffer data = pTransmitAction->data();
-
-    bool ret = removeFromPostsAndSafelyRelease(pAction);
-
-    if (onBufferReceived)
-        this->onBufferReceived(this, data);
-
-    if (ret && onDisconnected)
-        onDisconnected(this);
-}
-
-void Connection::whenSendOrReceiveFailed(Context::IAction* pAction, int err)
-{
-    disconnect();
-
-    if(removeFromPostsAndSafelyRelease(pAction) && onDisconnected)
-        onDisconnected(this);
-}
-
-bool Connection::recordToPosts(Context::SPTRIAction sptrAction)
-{
-    if (m_didDisconnect)
+    if (!m_connected || m_disconnecting)
         return false;
 
-    std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-    if (m_didDisconnect)
-        return false;
-
-    m_posts.insert(sptrAction);
-    return true;
-}
-
-bool Connection::removeFromPostsAndSafelyRelease(Context::IAction *pAction)
-{
-    std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-
-    size_t t = removeFromPosts(pAction);
-    if (m_connected && m_didDisconnect && !t)
+    context->increase();
+    do
     {
-        closesocket(m_handle);
-        m_connected = false;
+        m_lock.lock();
+        if (!m_connected || m_disconnecting)
+        {
+            m_lock.unlock();
+            break;
+        }
+
+        increasePostCount();
+        int ret;
+        DWORD flags = 0;
+        if (isSend)
+            ret = WSASend(m_handle, context->WSABuf(), 1,  NULL, flags, context, NULL);
+        else
+            ret = WSARecv(m_handle, context->WSABuf(), 1,  NULL, &flags, context, NULL);
+
+        if (ret == SOCKET_ERROR)
+        {
+            int err = WSAGetLastError();
+            if(err != WSA_IO_PENDING)
+            {
+                decreasePostCount();
+                m_lock.unlock();
+
+                disconnect();
+                break;
+            }
+        }
+        m_lock.unlock();
+
         return true;
-    }
+    }while(0);
+
+    context->decrease();
     return false;
 }
 
-size_t Connection::removeFromPosts(Context::IAction* pAction)
+bool Connection::post(AutoBuffer buffer, bool isSend,
+    std::function<void(Context*, size_t)> doneCallback, std::function<void(Context*, int)> errorCallback)
 {
-    std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-    m_posts.erase(pAction->shared_from_this());
+    if (!m_connected || m_disconnecting)
+        return false;
 
-    return m_posts.size();
+    Context *context = new Context(buffer);
+    context->onDone = doneCallback;
+    context->onError = errorCallback;
+    do
+    {
+        m_lock.lock();
+        if (!m_connected || m_disconnecting)
+        {
+            m_lock.unlock();
+            return false;
+        }
+
+        increasePostCount();
+        int ret;
+        DWORD flags = 0;
+        if (isSend)
+            ret = WSASend(m_handle, context->WSABuf(), 1,  NULL, flags, context, NULL);
+        else
+            ret = WSARecv(m_handle, context->WSABuf(), 1,  NULL, &flags, context, NULL);
+
+        if (ret == SOCKET_ERROR)
+        {
+            int err = WSAGetLastError();
+            if(err != WSA_IO_PENDING)
+            {
+                decreasePostCount();
+                m_lock.unlock();
+
+                disconnect();
+                break;
+            }
+        }
+        m_lock.unlock();
+
+        return true;
+    }while(0);
+
+    context->decrease();
+    return false;
 }
+
+void Connection::whenSendDone(Context *context, size_t increase)
+{
+    if (!m_disconnecting)
+    {
+        if (increase)
+        {
+            if (context->finished())
+            {
+                if (onBufferSent)
+                    onBufferSent(this, context->buffer());
+            }
+            else
+                post(context, true);
+        }
+        else
+        {
+            disconnect();
+        }
+    }
+    else
+    {
+        if (context->finished())
+        {
+            if (onBufferSent)
+                onBufferSent(this, context->buffer());
+        }
+    }
+
+    bool disconnecting = m_disconnecting;
+    int count = decreasePostCount();
+    if (disconnecting && !count)
+        whenDisconnected();
+}
+void Connection::whenRecvDone(Context *context, size_t increase)
+{
+    if (!m_disconnecting)
+    {
+        if (increase)
+        {
+            if (context->finished())
+            {
+                if (onBufferReceived)
+                    onBufferReceived(this, context->buffer());
+            }
+            else
+                post(context, false);
+        }
+        else
+        {
+            disconnect();
+        }
+    }
+    else
+    {
+        if (context->finished())
+        {
+            if (onBufferReceived)
+                onBufferReceived(this, context->buffer());
+        }
+    }
+
+    bool disconnecting = m_disconnecting;
+    int count = decreasePostCount();
+    if (disconnecting && !count)
+        whenDisconnected();
+}
+
+void Connection::whenError(Context *context, int err)
+{
+    bool disconnecting = m_disconnecting;
+    int count = decreasePostCount();
+    if (disconnecting && !count)
+    {
+        whenDisconnected();
+    }
+    else
+        disconnect();
+}
+
+void Connection::whenDisconnected()
+{
+    if (!m_connected)
+        return;
+    {
+        std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
+        if (!m_connected)
+            return;
+
+        m_connected = false;
+        m_disconnecting = false;
+    }
+
+    if (onDisconnected)
+        onDisconnected(this);
+}
+
+int Connection::increasePostCount()
+{
+    return ++m_countPost;
+}
+
+int Connection::decreasePostCount()
+{
+    return --m_countPost;
+}
+

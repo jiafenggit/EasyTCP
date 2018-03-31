@@ -19,6 +19,9 @@ Worker::~Worker()
 
 bool Worker::init()
 {
+    if (m_ioCompletionPort)
+        return false;
+
     m_ioCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     if (!m_ioCompletionPort)
     {
@@ -43,11 +46,11 @@ bool Worker::attach(Connection *con)
 
 void Worker::execute()
 {
-    int errcode;
+    int err;
     int ret;
     DWORD numBytes;
     ULONG_PTR key;
-    Context::Context *pContext;
+    Context *pContext;
 
     while (!m_terminated)
     {
@@ -58,15 +61,17 @@ void Worker::execute()
             if (!pContext)
                 break;
 
-            pContext->action()->update(numBytes);
+            pContext->increaseProgress(numBytes);
+            pContext->decrease();
         }
         else
         {
-            errcode = WSAGetLastError();
+            err = WSAGetLastError();
 
             if (pContext)
             {
-                pContext->action()->error(errcode);
+                pContext->error(err);
+                pContext->decrease();
             }
             else
                 break;

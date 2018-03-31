@@ -3,10 +3,10 @@
 
 using namespace EasyTcp;
 
-AutoBuffer::AutoBuffer()
+AutoBuffer::AutoBuffer(size_t size)
 	: m_size(0)
 {
-
+    reset(size);
 }
 
 void AutoBuffer::reset()

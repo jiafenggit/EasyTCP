@@ -8,6 +8,7 @@
 #include "EasyTcpContext.h"
 #include <set>
 #include <mutex>
+#include <atomic>
 
 namespace EasyTcp
 {
@@ -50,19 +51,24 @@ namespace EasyTcp
         std::function<void (Connection*, AutoBuffer data)> onBufferReceived;
 
     protected:
-        bool recordToPosts(Context::SPTRIAction sptrAction);
-        size_t removeFromPosts(Context::IAction* pAction);
-        bool removeFromPostsAndSafelyRelease(Context::IAction* pAction);
+        bool post(Context *context, bool isSend);
+        bool post(AutoBuffer buffer, bool isSend, std::function<void(Context*, size_t)> doneCallback,
+                std::function<void(Context*, int)> errorCallback);
 
-        void whenSent(Context::IAction* pAction);
-        void whenReceived(Context::IAction* pAction);
-        void whenSendOrReceiveFailed(Context::IAction* pAction, int err);
+        void whenSendDone(Context *context, size_t increase);
+        void whenRecvDone(Context *context, size_t increase);
+        void whenError(Context *context, int err);
+
+        void whenDisconnected();
+        int increasePostCount();
+        int decreasePostCount();
 
     protected:
         SOCKET m_handle;
 
         bool m_connected;
-        bool m_didDisconnect;
+        bool m_disconnecting;
+
         std::string m_localIP;
         unsigned short m_localPort;
 
@@ -70,9 +76,9 @@ namespace EasyTcp
         unsigned short m_peerPort;
 
         std::recursive_mutex m_lock;
-        std::set<Context::SPTRIAction> m_posts;
-
         void* m_userdata;
+
+        std::atomic<int> m_countPost;
     };
 }
 
