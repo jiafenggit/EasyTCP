@@ -12,11 +12,13 @@
 
 namespace EasyTcp
 {
-    class Connection
+    class Connection : public std::enable_shared_from_this<Connection>
     {
     public:
         Connection();
         Connection(SOCKET sock, bool connected = true);
+
+        std::shared_ptr<Connection> share();
 
         SOCKET handle();
 
@@ -55,11 +57,12 @@ namespace EasyTcp
         bool post(AutoBuffer buffer, bool isSend, std::function<void(Context*, size_t)> doneCallback,
                 std::function<void(Context*, int)> errorCallback);
 
+        void whenDone(Context *context, size_t increase,
+            std::function<void (Connection*, AutoBuffer data)> callback);
         void whenSendDone(Context *context, size_t increase);
         void whenRecvDone(Context *context, size_t increase);
         void whenError(Context *context, int err);
 
-        void whenDisconnected();
         int increasePostCount();
         int decreasePostCount();
 
@@ -67,7 +70,7 @@ namespace EasyTcp
         SOCKET m_handle;
 
         bool m_connected;
-        bool m_disconnecting;
+        std::atomic<bool> m_disconnecting;
 
         std::string m_localIP;
         unsigned short m_localPort;

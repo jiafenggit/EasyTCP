@@ -24,6 +24,11 @@ Connection::Connection(SOCKET sock, bool connected)
 
 }
 
+std::shared_ptr<Connection> Connection::share()
+{
+    return this->shared_from_this();
+}
+
 SOCKET Connection::handle()
 {
     return m_handle;
@@ -36,28 +41,43 @@ bool Connection::connected()
 
 bool Connection::disconnect()
 {
-    if (!m_connected || m_disconnecting)
+    if (!m_connected)
         return false;
 
+    do
     {
-        std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-        if (!m_connected || m_disconnecting)
-            return false;
+        std::lock_guard<std::recursive_mutex> guard(m_lock);
+        if (m_disconnecting)
+            break;
 
         m_disconnecting = true;
         closesocket(m_handle);
+        m_handle = INVALID_SOCKET;
     }
+    while(0);
 
     if (!m_countPost)
     {
-        whenDisconnected();
-    }
+        {
+            std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
+            if (!m_connected)
+                return false;
 
+            m_connected = false;
+            m_disconnecting = false;
+        }
+
+        if (onDisconnected)
+            onDisconnected(this);
+    }
     return true;
 }
 
 bool Connection::send(AutoBuffer buffer)
 {
+    if (!buffer.size())
+        return false;
+
     return post(buffer, true,
         std::bind(&Connection::whenSendDone, this, _1, _2),
         std::bind(&Connection::whenError, this, _1, _2));
@@ -65,6 +85,9 @@ bool Connection::send(AutoBuffer buffer)
 
 bool Connection::recv(AutoBuffer buffer)
 {
+    if (!buffer.size())
+        return false;
+
     return post(buffer, false,
         std::bind(&Connection::whenRecvDone, this, _1, _2),
         std::bind(&Connection::whenError, this, _1, _2));
@@ -184,26 +207,26 @@ bool Connection::post(Context *context, bool isSend)
         }
 
         increasePostCount();
+
         int ret;
         DWORD flags = 0;
         if (isSend)
             ret = WSASend(m_handle, context->WSABuf(), 1,  NULL, flags, context, NULL);
         else
             ret = WSARecv(m_handle, context->WSABuf(), 1,  NULL, &flags, context, NULL);
+        m_lock.unlock();
 
         if (ret == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
             if(err != WSA_IO_PENDING)
             {
+                std::shared_ptr<Connection> self = share();     //确保this指针可用
                 decreasePostCount();
-                m_lock.unlock();
-
                 disconnect();
                 break;
             }
         }
-        m_lock.unlock();
 
         return true;
     }while(0);
@@ -215,144 +238,79 @@ bool Connection::post(Context *context, bool isSend)
 bool Connection::post(AutoBuffer buffer, bool isSend,
     std::function<void(Context*, size_t)> doneCallback, std::function<void(Context*, int)> errorCallback)
 {
-    if (!m_connected || m_disconnecting)
-        return false;
-
     Context *context = new Context(buffer);
     context->onDone = doneCallback;
     context->onError = errorCallback;
+
+    bool ret = post(context, isSend);
+    context->decrease();
+    return ret;
+}
+
+void Connection::whenDone(Context *context, size_t increase,
+    std::function<void (Connection *, AutoBuffer)> callback)
+{
+    if (context->finished())
+    {
+        if (callback)
+            callback(this, context->buffer());
+    }
+
     do
     {
-        m_lock.lock();
-        if (!m_connected || m_disconnecting)
+        if (!m_disconnecting)
         {
-            m_lock.unlock();
-            return false;
-        }
-
-        increasePostCount();
-        int ret;
-        DWORD flags = 0;
-        if (isSend)
-            ret = WSASend(m_handle, context->WSABuf(), 1,  NULL, flags, context, NULL);
-        else
-            ret = WSARecv(m_handle, context->WSABuf(), 1,  NULL, &flags, context, NULL);
-
-        if (ret == SOCKET_ERROR)
-        {
-            int err = WSAGetLastError();
-            if(err != WSA_IO_PENDING)
+            if (increase)
             {
-                decreasePostCount();
-                m_lock.unlock();
-
-                disconnect();
-                break;
+                if (!context->finished())
+                {
+                    if(!post(context, true))
+                        break;
+                }
             }
+            else
+                break;
         }
-        m_lock.unlock();
+        else
+        {
+            if (m_countPost - 1 == 0)
+                break;
+        }
 
-        return true;
-    }while(0);
+        if (m_countPost - 1 == 0)
+        {
+            std::shared_ptr<Connection> self = share();     //确保this指针可用
+            decreasePostCount();
+            if (m_disconnecting)
+                disconnect();
+            return;
+        }
 
-    context->decrease();
-    return false;
+        decreasePostCount();
+        return;
+    }while (0);
+
+
+    std::shared_ptr<Connection> self = share();     //确保this指针可用
+    decreasePostCount();
+    disconnect();
+    return;
 }
 
 void Connection::whenSendDone(Context *context, size_t increase)
 {
-    if (!m_disconnecting)
-    {
-        if (increase)
-        {
-            if (context->finished())
-            {
-                if (onBufferSent)
-                    onBufferSent(this, context->buffer());
-            }
-            else
-                post(context, true);
-        }
-        else
-        {
-            disconnect();
-        }
-    }
-    else
-    {
-        if (context->finished())
-        {
-            if (onBufferSent)
-                onBufferSent(this, context->buffer());
-        }
-    }
-
-    bool disconnecting = m_disconnecting;
-    int count = decreasePostCount();
-    if (disconnecting && !count)
-        whenDisconnected();
+    whenDone(context, increase, onBufferSent);
 }
 void Connection::whenRecvDone(Context *context, size_t increase)
 {
-    if (!m_disconnecting)
-    {
-        if (increase)
-        {
-            if (context->finished())
-            {
-                if (onBufferReceived)
-                    onBufferReceived(this, context->buffer());
-            }
-            else
-                post(context, false);
-        }
-        else
-        {
-            disconnect();
-        }
-    }
-    else
-    {
-        if (context->finished())
-        {
-            if (onBufferReceived)
-                onBufferReceived(this, context->buffer());
-        }
-    }
-
-    bool disconnecting = m_disconnecting;
-    int count = decreasePostCount();
-    if (disconnecting && !count)
-        whenDisconnected();
+    whenDone(context, increase, onBufferReceived);
 }
 
 void Connection::whenError(Context *context, int err)
 {
-    bool disconnecting = m_disconnecting;
-    int count = decreasePostCount();
-    if (disconnecting && !count)
-    {
-        whenDisconnected();
-    }
-    else
-        disconnect();
-}
-
-void Connection::whenDisconnected()
-{
-    if (!m_connected)
-        return;
-    {
-        std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
-        if (!m_connected)
-            return;
-
-        m_connected = false;
-        m_disconnecting = false;
-    }
-
-    if (onDisconnected)
-        onDisconnected(this);
+    std::shared_ptr<Connection> self = share();     //确保this指针可用
+    decreasePostCount();
+    disconnect();
 }
 
 int Connection::increasePostCount()
