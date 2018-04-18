@@ -47,7 +47,7 @@ bool Connection::disconnect()
     do
     {
         std::lock_guard<std::recursive_mutex> guard(m_lock);
-        if (m_disconnecting)
+        if (m_disconnecting || !m_connected)
             break;
 
         m_disconnecting = true;
