@@ -69,12 +69,10 @@ void Acceptor::execute()
     sockaddr_in addr;
     int sock;
 
-    while (!m_terminated
-        && (sock = ::accept(m_socket, (sockaddr*)&addr, &lenAddr)) > 0)
+    while (!m_terminated)
     {
-        if (onAccepted)
+        sock = ::accept(m_socket, (sockaddr*)&addr, &lenAddr));
+        if (sock > 0 && onAccepted)
             onAccepted(sock);
-        else
-            close(sock);
     }
 }
