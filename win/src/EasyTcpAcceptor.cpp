@@ -61,7 +61,10 @@ void Acceptor::execute()
     while (!m_terminated)
     {
         sock = ::accept(m_socket, (sockaddr*)&addr, &lenAddr));
-        if (sock != INVALID_SOCKET && onAccepted)
-            onAccepted(sock);
+        if (sock != INVALID_SOCKET)
+            if (onAccepted)
+                onAccepted(sock);
+            else
+                closesocket(sock);
     }
 }
