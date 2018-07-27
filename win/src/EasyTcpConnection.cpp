@@ -2,6 +2,7 @@
 #include <mstcpip.h>
 #include <mswsock.h>
 #include <WinBase.h>
+#include <unistd.h>
 
 using namespace EasyTcp;
 using namespace std::placeholders;
@@ -22,6 +23,13 @@ Connection::Connection(SOCKET sock, bool connected)
       m_countPost(0)
 {
 
+}
+
+Connection::~Connection()
+{
+    disconnect();
+    while(m_connected || m_countPost)
+        usleep(1);
 }
 
 std::shared_ptr<Connection> Connection::share()
@@ -53,6 +61,7 @@ bool Connection::disconnect()
         m_disconnecting = true;
         closesocket(m_handle);
         m_handle = INVALID_SOCKET;
+
     }
     while(0);
 
@@ -194,7 +203,9 @@ void *Connection::userdata()
 bool Connection::post(Context *context, bool isSend)
 {
     if (!m_connected || m_disconnecting)
+    {
         return false;
+    }
 
     context->increase();
     do
@@ -221,7 +232,6 @@ bool Connection::post(Context *context, bool isSend)
             int err = WSAGetLastError();
             if(err != WSA_IO_PENDING)
             {
-                std::shared_ptr<Connection> self = share();     //确保this指针可用
                 decreasePostCount();
                 disconnect();
                 break;
@@ -265,24 +275,31 @@ void Connection::whenDone(Context *context, size_t increase,
                 if (!context->finished())
                 {
                     if(!post(context, true))
+                    {
                         break;
+                    }
                 }
             }
             else
+            {
                 break;
+            }
         }
         else
         {
             if (m_countPost - 1 == 0)
+            {
                 break;
+            }
         }
 
         if (m_countPost - 1 == 0)
         {
-            std::shared_ptr<Connection> self = share();     //确保this指针可用
             decreasePostCount();
             if (m_disconnecting)
+            {
                 disconnect();
+            }
             return;
         }
 
@@ -291,7 +308,6 @@ void Connection::whenDone(Context *context, size_t increase,
     }while (0);
 
 
-    std::shared_ptr<Connection> self = share();     //确保this指针可用
     decreasePostCount();
     disconnect();
     return;
@@ -308,7 +324,6 @@ void Connection::whenRecvDone(Context *context, size_t increase)
 
 void Connection::whenError(Context *context, int err)
 {
-    std::shared_ptr<Connection> self = share();     //确保this指针可用
     decreasePostCount();
     disconnect();
 }
