@@ -233,7 +233,6 @@ bool Connection::post(Context *context, bool isSend)
             if(err != WSA_IO_PENDING)
             {
                 decreasePostCount();
-                disconnect();
                 break;
             }
         }
@@ -253,6 +252,8 @@ bool Connection::post(AutoBuffer buffer, bool isSend,
     context->onError = errorCallback;
 
     bool ret = post(context, isSend);
+    if (!ret)
+        disconnect();
     context->decrease();
     return ret;
 }
