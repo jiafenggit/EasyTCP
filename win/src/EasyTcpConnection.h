@@ -17,6 +17,7 @@ namespace EasyTcp
     public:
         Connection();
         Connection(SOCKET sock, bool connected = true);
+        ~Connection();
 
         std::shared_ptr<Connection> share();
 
