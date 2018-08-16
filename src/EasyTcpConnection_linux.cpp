@@ -282,7 +282,7 @@ void Connection::handleEvents(uint32_t events)
         disconnect();
 }
 
-void Connection::_close(void *userdata)
+void Connection::close(void *userdata)
 {
     std::lock_guard<std::recursive_mutex> lockGuard(m_lock);
 
@@ -298,6 +298,11 @@ void Connection::_close(void *userdata)
     {
         this->onDisconnected(this);
     }
+}
+
+void Connection::_close(void *userdata)
+{
+    close(userdata);
 }
 
 Connection::Task::Task(AutoBuffer data)

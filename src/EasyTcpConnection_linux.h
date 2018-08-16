@@ -69,6 +69,7 @@ namespace EasyTcp
 
     protected:
         void handleEvents(uint32_t events);
+        virtual void close(void* userdata);
         void _close(void* userdata);
 
     protected:

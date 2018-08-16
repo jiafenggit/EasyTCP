@@ -8,7 +8,7 @@ namespace EasyTcp
 typedef int SOCKET;
 
 #define INVALID_SOCKET	(SOCKET)(~0)
-#define closesocket(fd)  close((fd))
+#define closesocket(fd)  ::close((fd))
 
 #else
 #include <winsock2.h>

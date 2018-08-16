@@ -19,6 +19,7 @@ namespace EasyTcp
         ~Client();
 
         bool connect(const std::string& host, unsigned short port);
+        bool disconnect();
 
     private:
         Client(WorkerPtr worker);
@@ -27,6 +28,7 @@ namespace EasyTcp
         WorkerPtr m_worker;
         IOCP* m_iocp;
         std::atomic<bool> m_connecting;
+        bool m_detained;
     };
 }
 

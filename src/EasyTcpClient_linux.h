@@ -22,11 +22,13 @@ namespace EasyTcp
 
     private:
         Client(WorkerPtr worker);
+        void close(void* userdata);
 
     private:
         std::atomic<bool> m_connecting;
         WorkerPtr m_worker;
         EventPoll* m_eventPoll;
+        bool m_detained;
     };
 }
 

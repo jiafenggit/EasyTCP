@@ -14,9 +14,17 @@ Client::Client(WorkerPtr worker)
     : Connection(static_cast<EventPoll*>(worker.get())),
       m_worker(worker),
       m_connecting(false),
-      m_eventPoll(static_cast<EventPoll*>(worker.get()))
+      m_eventPoll(static_cast<EventPoll*>(worker.get())),
+      m_detained(false)
 {
 
+}
+
+void Client::close(void *userdata)
+{
+    m_detained = true;
+    Connection::close(userdata);
+    m_detained = false;
 }
 
 IClientPtr Client::create()
@@ -43,7 +51,7 @@ IClientPtr Client::create(WorkerPtr worker)
 Client::~Client()
 {
     disconnect();
-    while (m_connected || m_connecting)
+    while (m_connected || m_connecting || m_detained)
         usleep(1);
 }
 
@@ -103,14 +111,16 @@ bool Client::connect(const std::string& host, unsigned short port)
                 }
                 else
                 {
-                    m_connecting = false;
                     int err;
                     socklen_t len = sizeof(err);
                     getsockopt(m_handle, SOL_SOCKET, SO_ERROR, &err, &len);
                     closesocket(m_handle);
+                    m_detained = true;
+                    m_connecting = false;
                     m_handle = INVALID_SOCKET;
                     if (onConnectFailed)
                         onConnectFailed(this, err);
+                    m_detained = false;
                 }
             });
 

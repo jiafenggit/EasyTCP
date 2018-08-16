@@ -12,7 +12,8 @@ using namespace std::placeholders;
 Client::Client(WorkerPtr worker)
     :   m_worker(worker),
         m_connecting(false),
-        m_iocp(static_cast<IOCP*>(worker.get()))
+        m_iocp(static_cast<IOCP*>(worker.get())),
+        m_detained(false)
 {
 
 }
@@ -49,7 +50,7 @@ IClientPtr Client::create(WorkerPtr worker)
 Client::~Client()
 {
     disconnect();
-    while(m_connected || m_countPost)
+    while(m_connected || m_countPost || m_detained)
         usleep(1);
     WSACleanup();
 }
@@ -109,10 +110,12 @@ bool Client::connect(const std::string& host, unsigned short port)
             decreasePostCount();
             closesocket(m_handle);
             m_handle = INVALID_SOCKET;
+            m_detained = true;
             m_connecting = 0;
 
             if (onConnectFailed)
                 this->onConnectFailed(this, err);
+            m_detained = false;
         };
 
         {
@@ -141,6 +144,15 @@ bool Client::connect(const std::string& host, unsigned short port)
     m_handle = INVALID_SOCKET;
     m_connecting = false;
     return false;
+}
+
+bool Client::disconnect()
+{
+    m_detained = true;
+    bool ret = Connection::disconnect();
+    m_detained = false;
+
+    return ret;
 }
 #endif
 
