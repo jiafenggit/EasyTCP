@@ -11,7 +11,7 @@
 #include "EasyTcpWorker.h"
 #include "EasyTcpContext_linux.h"
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class EventPoll : public Worker
     {

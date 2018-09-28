@@ -5,7 +5,7 @@
 #include <WinBase.h>
 #include <unistd.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 using namespace std::placeholders;
 
 Connection::Connection()

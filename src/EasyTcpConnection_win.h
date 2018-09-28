@@ -11,7 +11,7 @@
 #include <atomic>
 #include "EasyTcpIConnection.h"
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Connection : virtual public IConnection
     {

@@ -8,7 +8,7 @@
 #include "EasyTcpAutoBuffer.h"
 #include <atomic>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Context : public OVERLAPPED
     {

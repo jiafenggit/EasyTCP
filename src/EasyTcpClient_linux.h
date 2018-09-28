@@ -8,7 +8,7 @@
 #include "EasyTcpContext_linux.h"
 #include <atomic>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Client : public IClient, public Connection
     {

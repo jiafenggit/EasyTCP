@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <mutex>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Server : public IServer
     {

@@ -4,7 +4,7 @@
 #include <string>
 #include <memory>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class AutoBuffer
     {

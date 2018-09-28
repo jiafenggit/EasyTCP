@@ -5,7 +5,7 @@
 #include <functional>
 #include "EasyTcpIConnection.h"
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class IServer;
     typedef std::shared_ptr<IServer> IServerPtr;

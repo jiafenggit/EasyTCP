@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class IConnection;
     typedef std::shared_ptr<IConnection> IConnectionPtr;

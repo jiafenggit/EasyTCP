@@ -6,7 +6,7 @@
 #include "EasyTcpDef.h"
 #include "EasyTcpWorker.h"
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class IOCP : public Worker
     {

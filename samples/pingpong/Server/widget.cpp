@@ -16,7 +16,7 @@ Widget::Widget(QWidget *parent) :
     QObject::connect(this, SIGNAL(textNeedPrint(QTextEdit*,QString)),
             this, SLOT(printText(QTextEdit*,QString)));
 
-    m_server = EasyTcp::Server::create();
+    m_server = EasyTCP::Server::create();
     if (!m_server.get())
     {
         QMessageBox::critical(NULL, "初始化失败", "初始化 server 失败");
@@ -36,7 +36,7 @@ Widget::~Widget()
     delete ui;
 }
 
-void Widget::whenConnected(EasyTcp::IConnection *con)
+void Widget::whenConnected(EasyTCP::IConnection *con)
 {
     QString str;
 
@@ -56,7 +56,7 @@ void Widget::whenConnected(EasyTcp::IConnection *con)
     memset(pCount, 0, sizeof(Count));
     con->bindUserdata(pCount);
 
-    EasyTcp::AutoBuffer buf;
+    EasyTCP::AutoBuffer buf;
     buf.reset(TEST_DEFAULT_DATA_SIZ);
     if (!buf.size())
     {
@@ -70,7 +70,7 @@ void Widget::whenConnected(EasyTcp::IConnection *con)
     }
 }
 
-void Widget::whenDisconnected(EasyTcp::IConnection *con)
+void Widget::whenDisconnected(EasyTCP::IConnection *con)
 {
     QString str;
     Count *pCount = (Count *)(con->userdata());
@@ -88,14 +88,14 @@ void Widget::whenDisconnected(EasyTcp::IConnection *con)
     emit textNeedPrint(ui->txtedtMsg, str);
 }
 
-void Widget::whenBufferSent(EasyTcp::IConnection *con, EasyTcp::AutoBuffer data)
+void Widget::whenBufferSent(EasyTCP::IConnection *con, EasyTCP::AutoBuffer data)
 {
     Count *pCount = (Count *)(con->userdata());
     pCount->countWrite++;
     pCount->bytesWrite += data.size();
 }
 
-void Widget::whenBufferReceived(EasyTcp::IConnection *con, EasyTcp::AutoBuffer data)
+void Widget::whenBufferReceived(EasyTCP::IConnection *con, EasyTCP::AutoBuffer data)
 {
     QString str;
     Count *pCount = (Count *)(con->userdata());
@@ -113,7 +113,7 @@ void Widget::whenBufferReceived(EasyTcp::IConnection *con, EasyTcp::AutoBuffer d
     }
     else
     {
-        EasyTcp::AutoBuffer buf;
+        EasyTCP::AutoBuffer buf;
         buf.reset(TEST_DEFAULT_DATA_SIZ);
         if (!buf.size())
         {

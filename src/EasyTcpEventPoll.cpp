@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <string.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 EventPoll::EventPoll()
     : m_handle(-1),

@@ -3,7 +3,7 @@
 
 #include <memory>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Worker;
     typedef std::shared_ptr<Worker> WorkerPtr;

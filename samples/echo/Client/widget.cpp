@@ -18,7 +18,7 @@ Widget::Widget(QWidget *parent) :
     QObject::connect(this, SIGNAL(textNeedPrint(QTextEdit*,QString)),
             this, SLOT(printText(QTextEdit*,QString)));
 
-    m_client = EasyTcp::Client::create();
+    m_client = EasyTCP::Client::create();
     if (!m_client.get())
     {
         QMessageBox::critical(NULL, "初始化失败", "初始化 client 失败");
@@ -39,7 +39,7 @@ Widget::~Widget()
     delete ui;
 }
 
-void Widget::whenConnected(EasyTcp::IConnection *)
+void Widget::whenConnected(EasyTCP::IConnection *)
 {
     emit textNeedPrint(ui->txtedtMsg, "已连接");
     m_client->enableKeepalive();
@@ -47,7 +47,7 @@ void Widget::whenConnected(EasyTcp::IConnection *)
     m_client->setReceiveBufferSize(128 * 1024);
     m_client->setLinger(1, 0);
 
-    EasyTcp::AutoBuffer buf;
+    EasyTCP::AutoBuffer buf;
     buf.reset(TEST_DEFAULT_DATA_SIZ);
     if (!buf.size())
     {
@@ -59,17 +59,17 @@ void Widget::whenConnected(EasyTcp::IConnection *)
         m_client->disconnect();
 }
 
-void Widget::whenConnectFailed(EasyTcp::IConnection *, int err)
+void Widget::whenConnectFailed(EasyTCP::IConnection *, int err)
 {
     emit textNeedPrint(ui->txtedtMsg, "连接失败，错误 " + QString::number(err) + "");
 }
 
-void Widget::whenDisconnected(EasyTcp::IConnection *)
+void Widget::whenDisconnected(EasyTCP::IConnection *)
 {
     emit textNeedPrint(ui->txtedtMsg, "已断开");
 }
 
-void Widget::whenBufferSent(EasyTcp::IConnection *, EasyTcp::AutoBuffer data)
+void Widget::whenBufferSent(EasyTCP::IConnection *, EasyTCP::AutoBuffer data)
 {
     QString str;
     str.append(" 已发送:")
@@ -79,7 +79,7 @@ void Widget::whenBufferSent(EasyTcp::IConnection *, EasyTcp::AutoBuffer data)
     emit textNeedPrint(ui->txtedtMsg, str);
 }
 
-void Widget::whenBufferReceived(EasyTcp::IConnection *, EasyTcp::AutoBuffer data)
+void Widget::whenBufferReceived(EasyTCP::IConnection *, EasyTCP::AutoBuffer data)
 {
     QString str;
     str.append("已接收:");
@@ -93,7 +93,7 @@ void Widget::whenBufferReceived(EasyTcp::IConnection *, EasyTcp::AutoBuffer data
     {
         str.append(data.data());
 
-        EasyTcp::AutoBuffer buf;
+        EasyTCP::AutoBuffer buf;
         buf.reset(TEST_DEFAULT_DATA_SIZ);
         if (!buf.size())
         {
@@ -157,7 +157,7 @@ void Widget::disconnect()
 
 void Widget::send()
 {
-    EasyTcp::AutoBuffer buf;
+    EasyTCP::AutoBuffer buf;
     std::string str = ui->txtedtInput->toPlainText().toStdString();
 
     if (str.empty())

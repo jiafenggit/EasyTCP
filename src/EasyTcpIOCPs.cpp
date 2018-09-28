@@ -2,7 +2,7 @@
 #include "EasyTcpIOCPs.h"
 #include "EasyTcpIOCP.h"
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 IOCPs::IOCPs()
     : m_isRunning(false), m_indexNext(0)

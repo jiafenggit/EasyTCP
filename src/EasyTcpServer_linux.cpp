@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 using namespace std::placeholders;
 
 Server::Server()

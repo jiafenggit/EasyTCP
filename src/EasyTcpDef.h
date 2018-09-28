@@ -1,7 +1,7 @@
 #ifndef EASYTCPDEF_H
 #define EASYTCPDEF_H
 
-namespace EasyTcp
+namespace EasyTCP
 {
 #ifdef __linux__
 

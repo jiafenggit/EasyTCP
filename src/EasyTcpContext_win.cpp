@@ -4,7 +4,7 @@
 #include <mswsock.h>
 #include "assert.h"
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 Context::Context()
     :   m_ref(0),
@@ -22,7 +22,7 @@ Context::Context()
     increase();
 }
 
-Context::Context(EasyTcp::AutoBuffer buffer)
+Context::Context(EasyTCP::AutoBuffer buffer)
     :   Context()
 {
     m_buffer = buffer;
@@ -63,7 +63,7 @@ size_t Context::progress()
     return m_progress;
 }
 
-EasyTcp::AutoBuffer Context::buffer()
+EasyTCP::AutoBuffer Context::buffer()
 {
     return m_buffer;
 }

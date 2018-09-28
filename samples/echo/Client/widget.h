@@ -21,11 +21,11 @@ signals:
     void textNeedPrint(QTextEdit* control, QString str);
 
 private:
-    void whenConnected(EasyTcp::IConnection*);
-    void whenConnectFailed(EasyTcp::IConnection*, int err);
-    void whenDisconnected(EasyTcp::IConnection*);
-    void whenBufferSent(EasyTcp::IConnection*, EasyTcp::AutoBuffer data);
-    void whenBufferReceived(EasyTcp::IConnection*, EasyTcp::AutoBuffer data);
+    void whenConnected(EasyTCP::IConnection*);
+    void whenConnectFailed(EasyTCP::IConnection*, int err);
+    void whenDisconnected(EasyTCP::IConnection*);
+    void whenBufferSent(EasyTCP::IConnection*, EasyTCP::AutoBuffer data);
+    void whenBufferReceived(EasyTCP::IConnection*, EasyTCP::AutoBuffer data);
 
 private slots:
     void connect();
@@ -36,7 +36,7 @@ private slots:
 
 private:
     Ui::Widget *ui;
-    EasyTcp::IClientPtr m_client;
+    EasyTCP::IClientPtr m_client;
 };
 
 #endif // WIDGET_H

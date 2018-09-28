@@ -8,7 +8,7 @@
 #include <string.h>
 #include <assert.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 using namespace std::placeholders;
 
 Connection::Connection(EventPoll *eventPoll)

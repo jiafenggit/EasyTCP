@@ -6,7 +6,7 @@
 #include <functional>
 #include <sys/epoll.h>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     namespace Context
     {

@@ -1,7 +1,7 @@
 #ifdef __linux__
 #include "EasyTcpEventPolls.h"
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 EventPolls::EventPolls()
     : m_isRunning(false), m_indexNext(0)

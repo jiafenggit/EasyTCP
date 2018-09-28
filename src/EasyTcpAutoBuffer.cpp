@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 AutoBuffer::AutoBuffer()
 	: m_size(0)

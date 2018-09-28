@@ -12,7 +12,7 @@
 #include <list>
 #include <mutex>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Connection : virtual public IConnection
     {

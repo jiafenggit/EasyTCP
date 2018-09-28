@@ -2,7 +2,7 @@
 #include "EasyTcpContext_win.h"
 #include "EasyTcpIOCP.h"
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 IOCP::IOCP()
     : m_ioCompletionPort(NULL),

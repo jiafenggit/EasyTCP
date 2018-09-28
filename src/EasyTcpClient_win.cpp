@@ -6,7 +6,7 @@
 #include <functional>
 #include <unistd.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 using namespace std::placeholders;
 
 Client::Client(WorkerPtr worker)

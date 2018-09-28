@@ -16,7 +16,7 @@ Widget::Widget(QWidget *parent) :
     QObject::connect(this, SIGNAL(textNeedPrint(QTextEdit*,QString)),
             this, SLOT(printText(QTextEdit*,QString)));
 
-    m_server = EasyTcp::Server::create();
+    m_server = EasyTCP::Server::create();
     if (!m_server.get())
     {
         QMessageBox::critical(NULL, "初始化失败", "初始化 server 失败");
@@ -36,7 +36,7 @@ Widget::~Widget()
     delete ui;
 }
 
-void Widget::whenConnected(EasyTcp::IConnection *con)
+void Widget::whenConnected(EasyTCP::IConnection *con)
 {
     QString str;
     con->share();
@@ -52,7 +52,7 @@ void Widget::whenConnected(EasyTcp::IConnection *con)
     con->setReceiveBufferSize(128 * 1024);
     con->setLinger(1, 0);
 
-    EasyTcp::AutoBuffer buf;
+    EasyTCP::AutoBuffer buf;
     buf.reset(TEST_DEFAULT_DATA_SIZ);
     if (!buf.size())
     {
@@ -64,7 +64,7 @@ void Widget::whenConnected(EasyTcp::IConnection *con)
         con->disconnect();
 }
 
-void Widget::whenDisconnected(EasyTcp::IConnection *con)
+void Widget::whenDisconnected(EasyTCP::IConnection *con)
 {
     QString str;
 
@@ -76,7 +76,7 @@ void Widget::whenDisconnected(EasyTcp::IConnection *con)
     emit textNeedPrint(ui->txtedtMsg, str);
 }
 
-void Widget::whenBufferSent(EasyTcp::IConnection *con, EasyTcp::AutoBuffer data)
+void Widget::whenBufferSent(EasyTCP::IConnection *con, EasyTCP::AutoBuffer data)
 {
     QString str;
     str.append(con->peerIP().c_str())
@@ -89,7 +89,7 @@ void Widget::whenBufferSent(EasyTcp::IConnection *con, EasyTcp::AutoBuffer data)
     emit textNeedPrint(ui->txtedtMsg, str);
 }
 
-void Widget::whenBufferReceived(EasyTcp::IConnection *con, EasyTcp::AutoBuffer data)
+void Widget::whenBufferReceived(EasyTCP::IConnection *con, EasyTCP::AutoBuffer data)
 {
     QString str;
     str.append(con->peerIP().c_str())
@@ -106,7 +106,7 @@ void Widget::whenBufferReceived(EasyTcp::IConnection *con, EasyTcp::AutoBuffer d
     {
         str.append(data.data());
 
-        EasyTcp::AutoBuffer buf;
+        EasyTCP::AutoBuffer buf;
         buf.reset(TEST_DEFAULT_DATA_SIZ);
         if (!buf.size())
         {

@@ -6,7 +6,7 @@
 #include "EasyTcpWorker.h"
 #include "EasyTcpIConnection.h"
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class IClient;
     typedef std::shared_ptr<IClient> IClientPtr;

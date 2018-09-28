@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "EasyTcpAcceptor.h"
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 
 Acceptor::Acceptor()
     : m_socket(INVALID_SOCKET),

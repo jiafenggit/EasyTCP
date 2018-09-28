@@ -6,7 +6,7 @@
 #include <vector>
 #include <set>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class IOCPs
     {

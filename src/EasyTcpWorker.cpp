@@ -6,7 +6,7 @@
 #include "EasyTcpIOCP.h"
 #endif
 
-EasyTcp::WorkerPtr EasyTcp::Worker::create(int arg)
+EasyTCP::WorkerPtr EasyTCP::Worker::create(int arg)
 {
     WorkerPtr ret;
 

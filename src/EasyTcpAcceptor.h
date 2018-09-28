@@ -5,7 +5,7 @@
 #include <functional>
 #include <thread>
 
-namespace EasyTcp
+namespace EasyTCP
 {
     class Acceptor
     {

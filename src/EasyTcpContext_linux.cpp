@@ -1,7 +1,7 @@
 #ifdef __linux__
 #include "EasyTcpContext_linux.h"
 
-using namespace EasyTcp::Context;
+using namespace EasyTCP::Context;
 
 Context::Context(std::function<void (uint32_t)> callback)
     : m_callback(callback)

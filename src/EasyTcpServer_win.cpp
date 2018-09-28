@@ -3,7 +3,7 @@
 #include <time.h>
 #include <unistd.h>
 
-using namespace EasyTcp;
+using namespace EasyTCP;
 using namespace std::placeholders;
 
 Server::Server()
