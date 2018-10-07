@@ -23,8 +23,8 @@ namespace EasyTCP
         virtual bool connected() = 0;
 
         virtual bool disconnect() = 0;
-        virtual bool send(AutoBuffer buffer) = 0;
-        virtual bool recv(AutoBuffer buffer) = 0;
+        virtual bool send(AutoBuffer buffer, bool completely = true) = 0;
+        virtual bool recv(AutoBuffer buffer, bool completely = true) = 0;
 
         virtual bool enableKeepalive(unsigned long interval = 1000, unsigned long time = 2000) = 0;
         virtual bool disableKeepalive() = 0;
@@ -34,16 +34,16 @@ namespace EasyTCP
 
         virtual bool setLinger(unsigned short onoff, unsigned short linger) = 0;
 
-        virtual const std::string& localIP() = 0;
-        virtual unsigned short localPort() = 0;
+        virtual const std::string& localIP() const = 0;
+        virtual unsigned short localPort() const = 0;
 
-        virtual const std::string& peerIP() = 0;
-        virtual unsigned short peerPort() = 0;
+        virtual const std::string& peerIP() const = 0;
+        virtual unsigned short peerPort() const = 0;
 
         virtual bool updateEndPoint() = 0;
 
         virtual void bindUserdata(void* userdata) = 0;
-        virtual void* userdata() = 0;
+        virtual void* userdata() const = 0;
 
     public:
         std::function<void (IConnection*)> onDisconnected;

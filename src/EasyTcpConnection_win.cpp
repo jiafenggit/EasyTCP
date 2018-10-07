@@ -83,22 +83,22 @@ bool Connection::disconnect()
     return true;
 }
 
-bool Connection::send(AutoBuffer buffer)
+bool Connection::send(AutoBuffer buffer,  bool completely)
 {
-    if (!buffer.size())
+    if (!buffer.capacity() || buffer.capacity() == buffer.size())
         return false;
 
-    return post(buffer, true,
+    return post(buffer, true, completely,
         std::bind(&Connection::whenSendDone, this, _1, _2),
         std::bind(&Connection::whenError, this, _1, _2));
 }
 
-bool Connection::recv(AutoBuffer buffer)
+bool Connection::recv(AutoBuffer buffer,  bool completely)
 {
-    if (!buffer.size())
+    if (!buffer.capacity() || buffer.capacity() == buffer.size())
         return false;
 
-    return post(buffer, false,
+    return post(buffer, false, completely,
         std::bind(&Connection::whenRecvDone, this, _1, _2),
         std::bind(&Connection::whenError, this, _1, _2));
 }
@@ -151,22 +151,22 @@ bool Connection::setLinger(unsigned short onoff, unsigned short linger)
     return !setsockopt(m_handle, SOL_SOCKET, SO_LINGER, (char*)&opt, sizeof(opt));
 }
 
-const std::string& Connection::localIP()
+const std::string& Connection::localIP() const
 {
     return m_localIP;
 }
 
-unsigned short Connection::localPort()
+unsigned short Connection::localPort() const
 {
     return m_localPort;
 }
 
-const std::string& Connection::peerIP()
+const std::string& Connection::peerIP() const
 {
     return m_peerIP;
 }
 
-unsigned short Connection::peerPort()
+unsigned short Connection::peerPort() const
 {
     return m_peerPort;
 }
@@ -196,7 +196,7 @@ void Connection::bindUserdata(void *userdata)
     m_userdata = userdata;
 }
 
-void *Connection::userdata()
+void *Connection::userdata() const
 {
     return m_userdata;
 }
@@ -245,10 +245,10 @@ bool Connection::post(Context *context, bool isSend)
     return false;
 }
 
-bool Connection::post(AutoBuffer buffer, bool isSend,
+bool Connection::post(AutoBuffer buffer, bool isSend, bool completely,
     std::function<void(Context*, size_t)> doneCallback, std::function<void(Context*, int)> errorCallback)
 {
-    Context *context = new Context(buffer);
+    Context *context = new Context(buffer, completely);
     context->onDone = doneCallback;
     context->onError = errorCallback;
 
@@ -262,7 +262,7 @@ bool Connection::post(AutoBuffer buffer, bool isSend,
 void Connection::whenDone(Context *context, size_t increase,
     std::function<void (Connection *, AutoBuffer)> callback)
 {
-    if (context->finished())
+    if (context->finished() || !context->completely())
     {
         if (callback)
             callback(this, context->buffer());
@@ -274,7 +274,7 @@ void Connection::whenDone(Context *context, size_t increase,
         {
             if (increase)
             {
-                if (!context->finished())
+                if (!context->finished() && context->completely())
                 {
                     if(!post(context, true))
                     {

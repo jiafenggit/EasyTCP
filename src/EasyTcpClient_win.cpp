@@ -91,7 +91,7 @@ bool Client::connect(const std::string& host, unsigned short port)
                     break;
         }
 
-        Context *context = new Context();
+        Context *context = new Context(true);
         context->onDone = [this](Context*, size_t)
         {
             decreasePostCount();

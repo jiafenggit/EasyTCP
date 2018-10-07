@@ -38,6 +38,7 @@ private slots:
 private:
     Ui::Widget *ui;
     EasyTCP::IClientPtr m_client;
+    EasyTCP::AutoBuffer m_bufSend, m_bufRecv;
     Count m_count;
 };
 

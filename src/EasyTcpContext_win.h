@@ -13,8 +13,8 @@ namespace EasyTCP
     class Context : public OVERLAPPED
     {
     public:
-        Context();
-        Context(AutoBuffer buffer);
+        Context(bool completely);
+        Context(AutoBuffer buffer, bool completely);
 
         void increase();
         void decrease();
@@ -26,6 +26,7 @@ namespace EasyTCP
         AutoBuffer buffer();
         WSABUF* WSABuf();
         bool finished();
+        bool completely();
 
     public:
         std::function<void(Context*, size_t increase)> onDone;
@@ -38,6 +39,7 @@ namespace EasyTCP
         AutoBuffer m_buffer;
         std::atomic<int> m_ref;
         size_t m_progress;
+        bool m_completely;
         WSABUF m_wsaBuffer;
     };
 }

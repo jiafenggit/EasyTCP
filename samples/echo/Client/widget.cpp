@@ -8,7 +8,8 @@ using namespace std::placeholders;
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::Widget)
+    ui(new Ui::Widget),
+    m_recvBuf(TEST_DEFAULT_DATA_SIZ)
 {
     ui->setupUi(this);
 
@@ -47,15 +48,8 @@ void Widget::whenConnected(EasyTCP::IConnection *)
     m_client->setReceiveBufferSize(128 * 1024);
     m_client->setLinger(1, 0);
 
-    EasyTCP::AutoBuffer buf;
-    buf.reset(TEST_DEFAULT_DATA_SIZ);
-    if (!buf.size())
-    {
-        emit textNeedPrint(ui->txtedtMsg, "接收数据，内存不足");
-        return;
-    }
-
-    if(!m_client->recv(buf))
+    m_recvBuf.resize();
+    if(!m_client->recv(m_recvBuf))
         m_client->disconnect();
 }
 
@@ -93,19 +87,11 @@ void Widget::whenBufferReceived(EasyTCP::IConnection *, EasyTCP::AutoBuffer data
     {
         str.append(data.data());
 
-        EasyTCP::AutoBuffer buf;
-        buf.reset(TEST_DEFAULT_DATA_SIZ);
-        if (!buf.size())
+        data.resize();
+        if(!m_client->recv(data))
         {
-            str.append("\n接收数据，内存不足");
-        }
-        else
-        {
-            if(!m_client->recv(buf))
-            {
-                str.append("\nrecv失败");
-                m_client->disconnect();
-            }
+            str.append("\nrecv失败");
+            m_client->disconnect();
         }
     }
 

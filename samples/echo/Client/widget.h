@@ -37,6 +37,7 @@ private slots:
 private:
     Ui::Widget *ui;
     EasyTCP::IClientPtr m_client;
+    EasyTCP::AutoBuffer m_recvBuf;
 };
 
 #endif // WIDGET_H

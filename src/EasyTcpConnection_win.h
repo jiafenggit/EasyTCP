@@ -27,8 +27,8 @@ namespace EasyTCP
         bool connected();
 
         bool disconnect();
-        bool send(AutoBuffer buffer);
-        bool recv(AutoBuffer buffer);
+        bool send(AutoBuffer buffer, bool completely);
+        bool recv(AutoBuffer buffer, bool completely);
 
         bool enableKeepalive(unsigned long interval = 1000, unsigned long time = 2000);
         bool disableKeepalive();
@@ -38,20 +38,21 @@ namespace EasyTCP
 
         bool setLinger(unsigned short onoff, unsigned short linger);
 
-        const std::string& localIP();
-        unsigned short localPort();
+        const std::string& localIP() const ;
+        unsigned short localPort() const ;
 
-        const std::string& peerIP();
-        unsigned short peerPort();
+        const std::string& peerIP() const ;
+        unsigned short peerPort() const ;
 
         bool updateEndPoint();
 
         void bindUserdata(void* userdata);
-        void* userdata();
+        void* userdata() const ;
 
     protected:
         bool post(Context *context, bool isSend);
-        bool post(AutoBuffer buffer, bool isSend, std::function<void(Context*, size_t)> doneCallback,
+        bool post(AutoBuffer buffer, bool isSend, bool completely,
+                std::function<void(Context*, size_t)> doneCallback,
                 std::function<void(Context*, int)> errorCallback);
 
         void whenDone(Context *context, size_t increase,

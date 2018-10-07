@@ -56,14 +56,7 @@ void Widget::whenConnected(EasyTCP::IConnection *con)
     memset(pCount, 0, sizeof(Count));
     con->bindUserdata(pCount);
 
-    EasyTCP::AutoBuffer buf;
-    buf.reset(TEST_DEFAULT_DATA_SIZ);
-    if (!buf.size())
-    {
-        emit textNeedPrint(ui->txtedtMsg, "接收数据，内存不足");
-        return;
-    }
-
+    EasyTCP::AutoBuffer buf(TEST_DEFAULT_DATA_SIZ);
     if(!con->recv(buf))
     {
         con->disconnect();
@@ -113,22 +106,16 @@ void Widget::whenBufferReceived(EasyTCP::IConnection *con, EasyTCP::AutoBuffer d
     }
     else
     {
-        EasyTCP::AutoBuffer buf;
-        buf.reset(TEST_DEFAULT_DATA_SIZ);
-        if (!buf.size())
-        {
-            str.append("接收数据，内存不足");
-            emit textNeedPrint(ui->txtedtMsg, str);
-        }
-        else
-        {
-            pCount->countRead++;
-            pCount->bytesRead += data.size();
+        EasyTCP::AutoBuffer buf(data.data(), data.size());
 
-            if(!con->send(data) || !con->recv(buf))
-            {
-                con->disconnect();
-            }
+        pCount->countRead++;
+        pCount->bytesRead += data.size();
+
+        data.resize();
+        buf.resize();
+        if(!con->send(buf) || !con->recv(data))
+        {
+            con->disconnect();
         }
     }
 }

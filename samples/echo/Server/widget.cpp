@@ -8,7 +8,8 @@ using namespace std::placeholders;
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::Widget)
+    ui(new Ui::Widget),
+    m_recvBuf(TEST_DEFAULT_DATA_SIZ)
 {
     ui->setupUi(this);
     QObject::connect(ui->btnOpen, SIGNAL(clicked(bool)), this, SLOT(open()));
@@ -52,15 +53,8 @@ void Widget::whenConnected(EasyTCP::IConnection *con)
     con->setReceiveBufferSize(128 * 1024);
     con->setLinger(1, 0);
 
-    EasyTCP::AutoBuffer buf;
-    buf.reset(TEST_DEFAULT_DATA_SIZ);
-    if (!buf.size())
-    {
-        emit textNeedPrint(ui->txtedtMsg, "接收数据，内存不足");
-        return;
-    }
-
-    if(!con->recv(buf))
+    m_recvBuf.resize();
+    if(!con->recv(m_recvBuf))
         con->disconnect();
 }
 
@@ -106,17 +100,11 @@ void Widget::whenBufferReceived(EasyTCP::IConnection *con, EasyTCP::AutoBuffer d
     {
         str.append(data.data());
 
-        EasyTCP::AutoBuffer buf;
-        buf.reset(TEST_DEFAULT_DATA_SIZ);
-        if (!buf.size())
-        {
-            str.append("接收数据，内存不足");
-        }
-        else
-        {
-            if(!con->send(data) || !con->recv(buf))
-                con->disconnect();
-        }
+        data.resize();
+        m_recvBuf.resize();
+        if(!con->send(data) || !con->recv(m_recvBuf))
+            con->disconnect();
+
     }
 
     emit textNeedPrint(ui->txtedtMsg, str);

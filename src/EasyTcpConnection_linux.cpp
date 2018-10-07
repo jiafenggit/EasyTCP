@@ -68,8 +68,11 @@ bool Connection::disconnect()
     return true;
 }
 
-bool Connection::send(AutoBuffer buffer)
+bool Connection::send(AutoBuffer buffer, bool completely)
 {
+    if (!buffer.capacity() || buffer.capacity() == buffer.size())
+        return false;
+
     if (!m_connected)
         return false;
 
@@ -80,7 +83,7 @@ bool Connection::send(AutoBuffer buffer)
             return false;
 
         bool isEmpty = m_tasksSend.empty();
-        m_tasksSend.push_back(SPTRTask(new Task(buffer)));
+        m_tasksSend.push_back(SPTRTask(new Task(buffer, completely)));
         if (isEmpty)
         {
             m_context.events = EPOLLIN | EPOLLOUT;
@@ -91,8 +94,11 @@ bool Connection::send(AutoBuffer buffer)
     return true;
 }
 
-bool Connection::recv(AutoBuffer buffer)
+bool Connection::recv(AutoBuffer buffer, bool completely)
 {
+    if (!buffer.capacity() || buffer.capacity() == buffer.size())
+        return false;
+
     if (!m_connected || m_taskReceive.get())
         return false;
 
@@ -102,7 +108,7 @@ bool Connection::recv(AutoBuffer buffer)
         if (!m_connected || m_taskReceive.get())
             return false;
 
-        m_taskReceive.reset(new Task(buffer));
+        m_taskReceive.reset(new Task(buffer, completely));
     }
 
     return true;
@@ -142,22 +148,22 @@ bool Connection::setLinger(unsigned short onoff, unsigned short linger)
     return !setsockopt(m_handle, SOL_SOCKET, SO_LINGER, (char*)&opt, sizeof(opt));
 }
 
-const std::string& Connection::localIP()
+const std::string& Connection::localIP() const
 {
     return m_localIP;
 }
 
-unsigned short Connection::localPort()
+unsigned short Connection::localPort() const
 {
     return m_localPort;
 }
 
-const std::string& Connection::peerIP()
+const std::string& Connection::peerIP() const
 {
     return m_peerIP;
 }
 
-unsigned short Connection::peerPort()
+unsigned short Connection::peerPort() const
 {
     return m_peerPort;
 }
@@ -187,7 +193,7 @@ void Connection::bindUserdata(void *userdata)
     m_userdata = userdata;
 }
 
-void *Connection::userdata()
+void *Connection::userdata() const
 {
     return m_userdata;
 }
@@ -221,7 +227,7 @@ void Connection::handleEvents(uint32_t events)
             if (m_taskReceive.get())
             {
                 offset = m_taskReceive->progress();
-                size = m_taskReceive->data().size() - offset;
+                size = m_taskReceive->data().capacity() - offset;
                 ret = ::recv(m_handle,
                     m_taskReceive->data().data() + offset, size, 0);
                 if (ret <= 0)
@@ -229,9 +235,9 @@ void Connection::handleEvents(uint32_t events)
                     needDoDisconnect = true;
                     break;
                 }
-                assert(m_taskReceive->increase(ret));
+                m_taskReceive->increase(ret);
 
-                if (m_taskReceive->finished())
+                if (!m_taskReceive->completely() || m_taskReceive->finished())
                 {
                     taskReceive = m_taskReceive;
                     m_taskReceive.reset();
@@ -246,7 +252,7 @@ void Connection::handleEvents(uint32_t events)
             {
                 taskSend = m_tasksSend.front();
                 offset = taskSend->progress();
-                size = taskSend->data().size() - offset;
+                size = taskSend->data().capacity() - offset;
                 ret = ::send(m_handle,
                     taskSend->data().data() + offset, size, 0);
                 if (ret <= 0)
@@ -254,9 +260,9 @@ void Connection::handleEvents(uint32_t events)
                     needDoDisconnect = true;
                     break;
                 }
-                assert(taskSend->increase(ret));
+                taskSend->increase(ret);
 
-                if (taskSend->finished())
+                if (!taskSend->completely() || taskSend->finished())
                 {
                     m_tasksSend.pop_front();
                     needCallbackBufferSent = true;
@@ -305,9 +311,10 @@ void Connection::_close(void *userdata)
     close(userdata);
 }
 
-Connection::Task::Task(AutoBuffer data)
+Connection::Task::Task(AutoBuffer data, bool completely)
     : m_data(data),
-      m_progress(0)
+      m_progress(data.size()),
+      m_completely(completely)
 {
 
 }
@@ -322,21 +329,13 @@ AutoBuffer Connection::Task::data()
     return m_data;
 }
 
-bool Connection::Task::increase(size_t progress)
+void Connection::Task::increase(size_t progress)
 {
-    if (!progress)
-        return true;
+    assert(progress);
+    m_progress += progress;
 
-    size_t tmpProgress = m_progress + progress;
-
-    if (tmpProgress > m_data.size()
-        || (m_progress && (tmpProgress <= m_progress
-            || tmpProgress <= progress)))
-        return false;
-
-
-    m_progress = tmpProgress;
-    return true;
+    assert(m_progress <= m_data.capacity());
+    m_data.resize(m_progress);
 }
 
 size_t Connection::Task::progress()
@@ -346,7 +345,12 @@ size_t Connection::Task::progress()
 
 bool Connection::Task::finished()
 {
-    return m_progress == m_data.size();
+    return m_progress == m_data.capacity();
+}
+
+bool Connection::Task::completely()
+{
+    return m_completely;
 }
 
 #endif

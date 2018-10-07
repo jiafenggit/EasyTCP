@@ -19,17 +19,19 @@ namespace EasyTCP
         class Task
         {
         public:
-            Task(AutoBuffer data);
+            Task(AutoBuffer data, bool completely);
             ~Task();
 
             AutoBuffer data();
-            bool increase(size_t progress);
+            void increase(size_t progress);
             size_t progress();
             bool finished();
+            bool completely();
 
         private:
             AutoBuffer m_data;
             size_t m_progress;
+            bool m_completely;
         };
 
         typedef std::shared_ptr<Task> SPTRTask;
@@ -45,8 +47,8 @@ namespace EasyTCP
         bool connected();
 
         bool disconnect();
-        bool send(AutoBuffer buffer);
-        bool recv(AutoBuffer buffer);
+        bool send(AutoBuffer buffer, bool completely);
+        bool recv(AutoBuffer buffer, bool completely);
 
         bool enableKeepalive(unsigned long interval = 1000, unsigned long time = 2000);
         bool disableKeepalive();
@@ -56,16 +58,16 @@ namespace EasyTCP
 
         bool setLinger(unsigned short onoff, unsigned short linger);
 
-        const std::string& localIP();
-        unsigned short localPort();
+        const std::string& localIP() const ;
+        unsigned short localPort() const ;
 
-        const std::string& peerIP();
-        unsigned short peerPort();
+        const std::string& peerIP() const ;
+        unsigned short peerPort() const ;
 
         bool updateEndPoint();
 
         void bindUserdata(void* userdata);
-        void* userdata();
+        void* userdata() const ;
 
     protected:
         void handleEvents(uint32_t events);
